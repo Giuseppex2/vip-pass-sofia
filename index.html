@@ -2,142 +2,265 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Regalo 18° Sofia</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.7.2/vanilla-tilt.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
+        
         * { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
 
         body {
             margin: 0; padding: 0;
             background: url("napoli.jpeg") center/cover fixed;
             background-color: #0a0a0a;
-            font-family: 'Montserrat', sans-serif;
-            display: flex; justify-content: center; align-items: center;
-            height: 100vh; overflow: hidden; color: white;
+            font-family: 'Montserrat', sans-serif; display: flex;
+            justify-content: center; align-items: center; height: 100vh;
+            overflow: hidden; color: white;
         }
 
+        /* Velo che mantiene l'immagine scura e sfocata all'inizio */
         #scenery-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
             background-color: rgba(5, 10, 15, 0.85); backdrop-filter: blur(10px);
-            transition: opacity 1.5s ease; pointer-events: none;
+            transition: opacity 1.5s ease;
+            pointer-events: none;
         }
 
+        /* Schermata Sblocco */
         #start-screen {
             position: absolute; width: 100%; height: 100%; z-index: 20;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             transition: opacity 0.4s ease;
         }
 
-        /* --- CORREZIONE CENTRAGGIO BIGLIETTO --- */
-        #ticket-wrapper { 
-            z-index: 10; display: none; opacity: 0; transition: opacity 0.5s ease;
-            perspective: 1000px;
+        .hold-text { color: #00bfff; font-size: 12px; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 30px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+        .hold-btn-container { position: relative; width: 120px; height: 120px; display: flex; justify-content: center; align-items: center; touch-action: none; }
+        .progress-ring {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; 
+            background: conic-gradient(#00bfff 0%, transparent 0);
+            mask: radial-gradient(closest-side, transparent 90%, black 92%);
+            -webkit-mask: radial-gradient(closest-side, transparent 90%, black 92%); pointer-events: none;
         }
+        .hold-btn {
+            width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle, #003c82, #001f4d);
+            border: 2px solid #00bfff; box-shadow: 0 0 20px rgba(0,191,255,0.3);
+            display: flex; justify-content: center; align-items: center; font-size: 30px; cursor: pointer; transition: transform 0.1s;
+        }
+        .hold-btn:active { transform: scale(0.95); box-shadow: 0 0 40px rgba(0,191,255,0.6); }
+
+        #cinematic-text {
+            position: absolute; z-index: 15; font-size: 28px; font-weight: 900; color: #fff;
+            text-shadow: 0 0 20px #00bfff, 0 0 40px #00bfff; letter-spacing: 2px; text-align: center; opacity: 0; transform: scale(0.8); display: none;
+        }
+
+        #train-container { position: absolute; width: 100%; top: 50%; transform: translateY(-50%); z-index: 5; display: none; }
+        #train-mover { position: relative; left: -200px; }
+        #train { font-size: 80px; display: inline-block; transform: scaleX(-1); filter: drop-shadow(0 0 20px rgba(0, 191, 255, 0.9)); }
+        @keyframes speedLine { 0% { left: -200px; transform: skewX(10deg); } 50% { transform: skewX(25deg); } 100% { left: 120vw; transform: skewX(10deg); } }
+
+        /* BIGLIETTO FLIP 3D */
+        #ticket-wrapper { position: absolute; z-index: 10; display: none; opacity: 0; transition: opacity 0.5s ease; perspective: 1000px; }
         
         .ticket-inner {
-            width: 340px; height: 500px; position: relative; 
-            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 340px; height: 500px; position: relative; transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             transform-style: preserve-3d; cursor: pointer;
         }
-        /* -------------------------------------- */
-
         .ticket-inner.flipped { transform: rotateY(180deg); }
+
         .ticket-front, .ticket-back {
             position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
             border-radius: 20px; box-shadow: 0 30px 60px rgba(0,0,0,0.9); overflow: hidden; border: 1px solid #00509e;
         }
 
         .ticket-front { background: linear-gradient(135deg, #003c82, #0072ce); }
+        
         .ticket-header { background: #fff; color: #003c82; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
-        .header-text h3 { margin: 0; font-size: 18px; font-weight: 900; }
-        .profile-pic { width: 50px; height: 50px; border-radius: 50%; border: 3px solid #d4af37; background: #eee; }
+        .header-text h3 { margin: 0; font-size: 18px; font-weight: 900; letter-spacing: 1px; }
+        .header-text p { margin: 0; font-size: 10px; font-weight: 700; color: #d4af37; letter-spacing: 2px; }
+
         .ticket-body { padding: 25px; } 
         .row { display: flex; justify-content: space-between; margin-bottom: 20px; }
         .col { display: flex; flex-direction: column; }
         .col.right { text-align: right; }
         .label { font-size: 10px; color: #b3d4ff; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px; }
-        .value { font-size: 18px; font-weight: 700; color: #fff; }
-        .value.gold { color: #ffd700; font-size: 22px; }
-        .countdown-container { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 15px; margin-top: 10px; text-align: center; }
-        .time-val { font-size: 20px; font-weight: 900; }
+        .value { font-size: 18px; font-weight: 700; color: #fff; margin: 0; }
+        .value.gold { color: #ffd700; font-size: 22px; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
+
+        .countdown-container { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 15px; margin-top: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+        .countdown-title { font-size: 10px; color: #ffd700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
+        .countdown-timer { display: flex; justify-content: space-around; }
+        .time-box { display: flex; flex-direction: column; }
+        .time-val { font-size: 20px; font-weight: 900; color: #fff; }
         .time-label { font-size: 8px; color: #b3d4ff; text-transform: uppercase; }
-        .flip-hint { text-align: center; font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 15px; }
+
+        .flip-hint { text-align: center; font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 15px; animation: pulse 2s infinite; }
+
         .ticket-back { background: linear-gradient(135deg, #111, #222); transform: rotateY(180deg); display: flex; flex-direction: column; justify-content: space-between; padding: 30px; }
-        .back-header { text-align: center; color: #ffd700; font-size: 20px; font-weight: 900; border-bottom: 1px dashed #444; padding-bottom: 15px; }
+        .back-header { text-align: center; color: #ffd700; font-size: 20px; font-weight: 900; letter-spacing: 2px; border-bottom: 1px dashed #444; padding-bottom: 15px; }
+        
         .dedica { color: #fff; font-size: 14px; line-height: 1.6; text-align: center; font-style: italic; margin: 20px 0; }
         .firma { text-align: right; color: #ffd700; font-weight: bold; font-size: 16px; margin-top: 10px; }
-        .barcode { width: 100%; height: 50px; background: repeating-linear-gradient(90deg, #fff, #fff 2px, transparent 2px, transparent 5px, #fff 5px, #fff 8px, transparent 8px, transparent 12px); opacity: 0.8; margin-top: 20px; }
 
-        /* Elementi animati */
-        #cinematic-text { position: absolute; z-index: 15; font-size: 28px; font-weight: 900; text-shadow: 0 0 20px #00bfff; display: none; text-align: center; }
-        #train-container { position: absolute; width: 100%; top: 50%; transform: translateY(-50%); z-index: 5; display: none; }
-        #train-mover { position: relative; left: -200px; }
-        @keyframes speedLine { 0% { left: -200px; } 100% { left: 120vw; } }
-        .hold-text { color: #00bfff; font-size: 12px; letter-spacing: 4px; margin-bottom: 30px; animation: pulse 2s infinite; }
-        .hold-btn-container { position: relative; width: 120px; height: 120px; display: flex; justify-content: center; align-items: center; }
-        .progress-ring { position: absolute; width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(#00bfff 0%, transparent 0); mask: radial-gradient(closest-side, transparent 90%, black 92%); }
-        .hold-btn { width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle, #003c82, #001f4d); border: 2px solid #00bfff; display: flex; justify-content: center; align-items: center; font-size: 30px; cursor: pointer; }
+        .barcode { width: 100%; height: 50px; background: repeating-linear-gradient(90deg, #fff, #fff 2px, transparent 2px, transparent 5px, #fff 5px, #fff 8px, transparent 8px, transparent 12px); opacity: 0.8; margin-top: 20px; }
     </style>
 </head>
 <body>
+
     <div id="scenery-overlay"></div>
+
     <div id="start-screen">
-        <div class="hold-text">SBLOCCO VIP PASS</div>
+        <div class="hold-text">Sblocco VIP Pass</div>
         <div class="hold-btn-container" id="holdContainer">
             <div class="progress-ring" id="progressRing"></div>
             <div class="hold-btn">👆</div>
         </div>
     </div>
-    <div id="cinematic-text">BENVENUTA<br>A NAPOLI</div>
-    <div id="train-container"><div id="train-mover"><div style="font-size: 80px;">🚄</div></div></div>
 
-    <div id="ticket-wrapper">
+    <div id="cinematic-text">BENVENUTA<br>A NAPOLI</div>
+
+    <div id="train-container">
+        <div id="train-mover">
+            <div id="train">🚄</div>
+        </div>
+    </div>
+
+    <div id="ticket-wrapper" data-tilt data-tilt-glare data-tilt-max-glare="0.4" data-tilt-scale="1.05">
         <div class="ticket-inner" id="ticketInner">
+            
             <div class="ticket-front">
-                <div class="ticket-header"><div><h3>VIP PASS</h3><p>18° COMPLEANNO</p></div><div class="profile-pic"></div></div>
+                <div class="ticket-header">
+                    <div class="header-text">
+                        <h3>VIP PASS</h3>
+                        <p>18° COMPLEANNO</p>
+                    </div>
+                    <div class="profile-pic"></div>
+                </div>
                 <div class="ticket-body">
-                    <div class="row"><div class="col"><span class="label">Passeggero</span><span class="value">Sofia</span></div><div class="col right"><span class="label">Destinazione</span><span class="value gold">Napoli</span></div></div>
-                    <div class="row"><div class="col"><span class="label">Partenza</span><span class="value">Lamezia</span></div><div class="col right"><span class="label">Treno</span><span class="value">Freccia</span></div></div>
-                    <div class="countdown-container"><div class="countdown-title">Tempo alla partenza</div><div class="countdown-timer"><div class="time-box"><span class="time-val" id="giorni">00</span><span class="time-label">Giorni</span></div><div class="time-box"><span class="time-val" id="ore">00</span><span class="time-label">Ore</span></div><div class="time-box"><span class="time-val" id="minuti">00</span><span class="time-label">Min</span></div></div></div>
+                    <div class="row">
+                        <div class="col"><span class="label">Passeggero</span><span class="value">Sofia</span></div>
+                        <div class="col right"><span class="label">Destinazione</span><span class="value gold">Napoli</span></div>
+                    </div>
+                    <div class="row">
+                        <div class="col"><span class="label">Partenza</span><span class="value">Lamezia</span></div>
+                        <div class="col right"><span class="label">Treno</span><span class="value">Freccia</span></div>
+                    </div>
+                    
+                    <div class="countdown-container">
+                        <div class="countdown-title">Tempo alla partenza</div>
+                        <div class="countdown-timer">
+                            <div class="time-box"><span class="time-val" id="giorni">00</span><span class="time-label">Giorni</span></div>
+                            <div class="time-box"><span class="time-val" id="ore">00</span><span class="time-label">Ore</span></div>
+                            <div class="time-box"><span class="time-val" id="minuti">00</span><span class="time-label">Min</span></div>
+                            <div class="time-box"><span class="time-val" id="secondi">00</span><span class="time-label">Sec</span></div>
+                        </div>
+                    </div>
                     <div class="flip-hint">Tocca il biglietto per girarlo ↩️</div>
                 </div>
             </div>
+
             <div class="ticket-back">
                 <div class="back-header">BUON COMPLEANNO!</div>
-                <div class="dedica">"Diciotto anni sono il momento perfetto per realizzare i sogni che custodisci da sempre. Hai detto così tante volte di voler andare a Napoli che ho voluto essere io a portarti a scoprirla, per la prima volta, insieme. Preparati a vivere la tua città, perché da oggi inizia il tuo viaggio più bello. Tanti auguri Sofia, ti voglio bene❤️"</div>
-                <div class="firma">- Giuseppe</div><div class="barcode"></div>
+                <div class="dedica">
+                    "Diciotto anni sono il momento perfetto per realizzare i sogni che custodisci da sempre. Hai detto così tante volte di voler andare a Napoli che ho voluto essere io a portarti a scoprirla, per la prima volta, insieme. Preparati a vivere la tua città, perché da oggi inizia il tuo viaggio più bello. Tanti auguri Sofia, ti voglio bene❤️"
+                </div>
+                <div class="firma">- Giuseppe</div>
+                <div class="barcode"></div>
+                <div class="flip-hint">Tocca per tornare al biglietto ↩️</div>
             </div>
+            
         </div>
     </div>
 
     <script>
-        const startScreen = document.getElementById('start-screen'), holdContainer = document.getElementById('holdContainer'), progressRing = document.getElementById('progressRing'), trainContainer = document.getElementById('train-container'), ticketWrapper = document.getElementById('ticket-wrapper'), ticketInner = document.getElementById('ticketInner'), cinematicText = document.getElementById('cinematic-text'), sceneryOverlay = document.getElementById('scenery-overlay');
-        let holdTimer, progress = 0, isUnlocked = false;
+        const startScreen = document.getElementById('start-screen');
+        const holdContainer = document.getElementById('holdContainer');
+        const progressRing = document.getElementById('progressRing');
+        const trainContainer = document.getElementById('train-container');
+        const ticketWrapper = document.getElementById('ticket-wrapper');
+        const ticketInner = document.getElementById('ticketInner');
+        const cinematicText = document.getElementById('cinematic-text');
+        const sceneryOverlay = document.getElementById('scenery-overlay');
+        
+        let holdTimer; let progress = 0; let isUnlocked = false;
 
-        const startHold = (e) => { if (isUnlocked) return; holdTimer = setInterval(() => { progress += 2; progressRing.style.background = `conic-gradient(#00bfff ${progress}%, transparent 0)`; if (progress >= 100) { clearInterval(holdTimer); unlockGift(); } }, 20); };
-        const stopHold = () => { if (!isUnlocked) { clearInterval(holdTimer); progress = 0; progressRing.style.background = `conic-gradient(#00bfff 0%, transparent 0)`; } };
+        window.oncontextmenu = function(e) { e.preventDefault(); e.stopPropagation(); return false; };
+
+        const startHold = (e) => {
+            if (isUnlocked) return; e.preventDefault(); clearInterval(holdTimer);
+            holdTimer = setInterval(() => {
+                progress += 2;
+                progressRing.style.background = `conic-gradient(#00bfff ${progress}%, transparent 0)`;
+                if (progress >= 100) { clearInterval(holdTimer); unlockGift(); }
+            }, 20);
+        };
+        const stopHold = () => {
+            if (isUnlocked) return; clearInterval(holdTimer); progress = 0;
+            progressRing.style.background = `conic-gradient(#00bfff 0%, transparent 0)`;
+        };
 
         holdContainer.addEventListener('pointerdown', startHold);
-        window.addEventListener('pointerup', stopHold);
-        window.addEventListener('pointercancel', stopHold);
+        window.addEventListener('pointerup', stopHold); window.addEventListener('pointercancel', stopHold);
 
         function unlockGift() {
-            isUnlocked = true; startScreen.style.opacity = '0';
-            setTimeout(() => { startScreen.style.display = 'none'; trainContainer.style.display = 'block'; document.getElementById('train-mover').style.animation = 'speedLine 1.5s linear forwards';
-                setTimeout(() => { trainContainer.style.display = 'none'; sceneryOverlay.style.opacity = '0'; cinematicText.style.display = 'block'; cinematicText.animate([{ opacity: 0 }, { opacity: 1 }, { opacity: 0 }], { duration: 2000 });
-                    setTimeout(() => { cinematicText.style.display = 'none'; confetti({ particleCount: 200 }); ticketWrapper.style.display = 'block'; ticketWrapper.style.opacity = '1'; }, 2000); 
+            isUnlocked = true; 
+            startScreen.style.opacity = '0';
+
+            setTimeout(() => {
+                startScreen.style.display = 'none'; 
+                trainContainer.style.display = 'block';
+                document.getElementById('train-mover').style.animation = 'speedLine 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards';
+                
+                setTimeout(() => {
+                    trainContainer.style.display = 'none'; 
+                    
+                    // Dissolvenza del velo scuro per svelare Napoli
+                    sceneryOverlay.style.opacity = '0';
+                    
+                    cinematicText.style.display = 'block';
+                    cinematicText.animate([{ opacity: 0, transform: 'scale(0.8)' }, { opacity: 1, transform: 'scale(1.1)' }, { opacity: 0, transform: 'scale(1.5)' }], { duration: 1500, easing: 'ease-out' });
+
+                    setTimeout(() => {
+                        cinematicText.style.display = 'none';
+                        confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 }, colors: ['#00bfff', '#ffffff', '#003c82'] });
+                        ticketWrapper.style.display = 'block';
+                        setTimeout(() => ticketWrapper.style.opacity = '1', 50);
+                    }, 1000); 
                 }, 1500); 
             }, 300);
         }
-        ticketInner.addEventListener('click', () => ticketInner.classList.toggle('flipped'));
-        setInterval(() => {
-            const dist = new Date("Sep 4, 2026 08:00:00") - new Date();
-            document.getElementById("giorni").innerText = Math.floor(dist / (1000 * 60 * 60 * 24));
-            document.getElementById("ore").innerText = Math.floor((dist % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            document.getElementById("minuti").innerText = Math.floor((dist % (1000 * 60 * 60)) / (1000 * 60));
+
+        ticketInner.addEventListener('click', function() {
+            this.classList.toggle('flipped');
+        });
+
+        // Data di partenza
+        const targetDate = new Date("Sep 4, 2026 08:00:00").getTime();
+
+        setInterval(function() {
+            const now = new Date().getTime();
+            const distance = targetDate - now;
+
+            if (distance < 0) {
+                document.getElementById("giorni").innerText = "00";
+                document.getElementById("ore").innerText = "00";
+                document.getElementById("minuti").innerText = "00";
+                document.getElementById("secondi").innerText = "00";
+                return;
+            }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById("giorni").innerText = days < 10 ? "0" + days : days;
+            document.getElementById("ore").innerText = hours < 10 ? "0" + hours : hours;
+            document.getElementById("minuti").innerText = minutes < 10 ? "0" + minutes : minutes;
+            document.getElementById("secondi").innerText = seconds < 10 ? "0" + seconds : seconds;
         }, 1000);
     </script>
 </body>
