@@ -63,10 +63,10 @@
         @keyframes speedLine { 0% { left: -200px; transform: skewX(10deg); } 50% { transform: skewX(25deg); } 100% { left: 120vw; transform: skewX(10deg); } }
 
         /* BIGLIETTO FLIP 3D */
-        #ticket-wrapper { z-index: 10; display: none; opacity: 0; transition: opacity 0.5s ease; perspective: 1000px; }
+        #ticket-wrapper { position: fixed; z-index: 10; display: none; opacity: 0; transition: opacity 0.5s ease; perspective: 1000px; }
         
         .ticket-inner {
-            width: 340px; height: 500px; position: relative; transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 340px; height: 500px; position: sticky; transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             transform-style: preserve-3d; cursor: pointer;
         }
         .ticket-inner.flipped { transform: rotateY(180deg); }
